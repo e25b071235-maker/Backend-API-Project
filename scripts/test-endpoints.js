@@ -219,7 +219,45 @@ async function runTests() {
     assert(hasParameterizedSelect, 'GET filter must use parameterized query ($1)');
     console.log('✓ Parameterized SQL query verified for GET filter');
 
-    console.log('\n--- Route 1 and Route 2 Verified Successfully! ---');
+    // -------------------------------------------------------------
+    // Test 4: PATCH /assignments/:id (Mark Assignment as Submitted)
+    // -------------------------------------------------------------
+    console.log('\nTesting PATCH /assignments/:id...');
+    const patchRes = await request(app, {
+      method: 'PATCH',
+      path: '/assignments/1',
+    });
+    assert.strictEqual(patchRes.status, 200, 'PATCH should return 200 OK');
+    const patchedData = patchRes.json();
+    assert.strictEqual(patchedData.id, 1);
+    assert.strictEqual(patchedData.submitted, true, 'Assignment submitted must be updated to true');
+    console.log('✓ PATCH /assignments/1 passed:', patchedData);
+
+    // Test 4b: PATCH with non-existent ID (should return 404)
+    const patchNotFoundRes = await request(app, {
+      method: 'PATCH',
+      path: '/assignments/9999',
+    });
+    assert.strictEqual(patchNotFoundRes.status, 404, 'PATCH with non-existent ID should return 404');
+    assert.strictEqual(patchNotFoundRes.json().message, 'Assignment not found');
+    console.log('✓ PATCH 404 handling passed');
+
+    // Test 4c: PATCH with invalid ID (should return 400)
+    const patchInvalidIdRes = await request(app, {
+      method: 'PATCH',
+      path: '/assignments/abc',
+    });
+    assert.strictEqual(patchInvalidIdRes.status, 400, 'PATCH with invalid ID should return 400');
+    console.log('✓ PATCH invalid ID validation passed');
+
+    // Check parameterized query executed for UPDATE
+    const hasParameterizedUpdate = executedQueries.some(
+      (q) => q.text.includes('UPDATE assignments') && q.text.includes('WHERE id = $1') && q.params && q.params[0] === 1
+    );
+    assert(hasParameterizedUpdate, 'PATCH must use parameterized query ($1)');
+    console.log('✓ Parameterized SQL query verified for PATCH');
+
+    console.log('\n--- Route 1, Route 2, and Route 3 Verified Successfully! ---');
   } finally {
     pool.query = originalQuery;
   }

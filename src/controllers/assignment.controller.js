@@ -30,7 +30,28 @@ const getAssignments = async (req, res, next) => {
   }
 };
 
+/**
+ * Controller to handle PATCH /assignments/:id
+ * Sets submitted = true for the given assignment id
+ * Returns 200 with updated assignment, or 404 if not found
+ */
+const markAssignmentAsSubmitted = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const updatedAssignment = await assignmentService.markAssignmentSubmitted(Number(id));
+
+    if (!updatedAssignment) {
+      return res.status(404).json({ message: 'Assignment not found' });
+    }
+
+    res.status(200).json(updatedAssignment);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createAssignment,
   getAssignments,
+  markAssignmentAsSubmitted,
 };

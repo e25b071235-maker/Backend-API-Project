@@ -42,7 +42,23 @@ const getAllAssignments = async (submitted) => {
   return result.rows;
 };
 
+/**
+ * Service to mark an assignment as submitted (submitted = true)
+ * Uses parameterized SQL query.
+ */
+const markAssignmentSubmitted = async (id) => {
+  const query = `
+    UPDATE assignments
+    SET submitted = true
+    WHERE id = $1
+    RETURNING id, title, deadline, submitted;
+  `;
+  const result = await pool.query(query, [id]);
+  return result.rows[0] || null;
+};
+
 module.exports = {
   createAssignment,
   getAllAssignments,
+  markAssignmentSubmitted,
 };
