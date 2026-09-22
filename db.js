@@ -1,10 +1,9 @@
-const { Pool, types } = require('pg');
+const { Pool, types }=require('pg');
 require('dotenv').config();
 
-// Parse DATE (OID 1082) as a 'YYYY-MM-DD' string to match PDF output format
 types.setTypeParser(1082, (val) => val);
 
-const pool = new Pool({
+const pool=new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT, 10) || 5432,
   user: process.env.DB_USER || 'postgres',
@@ -13,7 +12,7 @@ const pool = new Pool({
 });
 
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle PostgreSQL client', err);
+  console.error('Database connection error', err);
 });
 
-module.exports = pool;
+module.exports=pool;

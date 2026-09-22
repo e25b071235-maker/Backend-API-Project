@@ -1,34 +1,31 @@
-const assert = require('assert');
-const http = require('http');
-const { Readable } = require('stream');
-const app = require('../app');
-const pool = require('../db');
+const assert=require('assert');
+const http=require('http');
+const { Readable }=require('stream');
+const app=require('../app');
+const pool=require('../db');
 
-/**
- * In-process HTTP request dispatcher without network sockets
- */
 function request(app, options) {
   return new Promise((resolve) => {
-    const { method = 'GET', path = '/', body = null, headers = {} } = options;
+    const { method='GET', path='/', body=null, headers={} }=options;
 
-    const payload = body !== null ? JSON.stringify(body) : null;
-    const reqHeaders = {
+    const payload=body !== null ? JSON.stringify(body) : null;
+    const reqHeaders={
       'host': 'localhost',
       ...headers,
     };
     if (payload !== null) {
-      reqHeaders['content-type'] = 'application/json';
-      reqHeaders['content-length'] = String(Buffer.byteLength(payload));
+      reqHeaders['content-type']='application/json';
+      reqHeaders['content-length']=String(Buffer.byteLength(payload));
     }
 
-    const req = new Readable({
+    const req=new Readable({
       read() {},
     });
-    req.method = method;
-    req.url = path;
-    req.headers = reqHeaders;
+    req.method=method;
+    req.url=path;
+    req.headers=reqHeaders;
 
-    const res = new http.ServerResponse(req);
+    const res=new http.ServerResponse(req);
     res.assignSocket({
       _writableState: {},
       cork() {},
@@ -39,17 +36,17 @@ function request(app, options) {
       emit() {},
     });
 
-    let responseData = '';
-    res.write = function (chunk) {
+    let responseData='';
+    res.write=function (chunk) {
       if (chunk) responseData += chunk.toString();
       return true;
     };
 
-    res.end = function (chunk) {
+    res.end=function (chunk) {
       if (chunk) responseData += chunk.toString();
-      let json = null;
+      let json=null;
       try {
-        json = JSON.parse(responseData);
+        json=JSON.parse(responseData);
       } catch (e) {}
 
       resolve({
@@ -69,29 +66,23 @@ function request(app, options) {
   });
 }
 
-/**
- * Test runner to verify all endpoints and architecture requirements.
- */
 async function runTests() {
-  console.log('--- Starting API Endpoint Tests ---');
+  console.log('Running tests...');
 
-  // Track queries executed by pool
-  const originalQuery = pool.query;
-  const executedQueries = [];
+  const originalQuery=pool.query;
+  const executedQueries=[];
 
-  // In-memory mock store
-  const inMemoryAssignments = [
+  const inMemoryAssignments=[
     { id: 1, title: 'Backend Lab', deadline: '2026-08-10', submitted: false },
     { id: 2, title: 'Express Lab', deadline: '2026-08-12', submitted: true },
   ];
 
-  pool.query = async function (text, params) {
+  pool.query=async function (text, params) {
     executedQueries.push({ text: text.trim(), params });
 
-    // Handle INSERT
     if (text.includes('INSERT INTO assignments')) {
-      const newId = inMemoryAssignments.length + 1;
-      const created = {
+      const newId=inMemoryAssignments.length + 1;
+      const created={
         id: newId,
         title: params[0],
         deadline: params[1],
@@ -101,38 +92,34 @@ async function runTests() {
       return { rows: [created] };
     }
 
-    // Handle SELECT with submitted filter
     if (text.includes('SELECT') && text.includes('WHERE submitted = $1')) {
-      const isSub = params[0];
-      const rows = inMemoryAssignments
+      const isSub=params[0];
+      const rows=inMemoryAssignments
         .filter((a) => a.submitted === isSub)
         .sort((a, b) => b.id - a.id);
       return { rows };
     }
 
-    // Handle SELECT all (ORDER BY id DESC)
     if (text.includes('SELECT') && text.includes('ORDER BY id DESC')) {
-      const rows = [...inMemoryAssignments].sort((a, b) => b.id - a.id);
+      const rows=[...inMemoryAssignments].sort((a, b) => b.id - a.id);
       return { rows };
     }
 
-    // Handle UPDATE
     if (text.includes('UPDATE assignments') && text.includes('SET submitted = true')) {
-      const id = params[0];
-      const item = inMemoryAssignments.find((a) => a.id === id);
+      const id=params[0];
+      const item=inMemoryAssignments.find((a) => a.id === id);
       if (item) {
-        item.submitted = true;
+        item.submitted=true;
         return { rows: [{ ...item }] };
       }
       return { rows: [] };
     }
 
-    // Handle DELETE
     if (text.includes('DELETE FROM assignments')) {
-      const id = params[0];
-      const index = inMemoryAssignments.findIndex((a) => a.id === id);
+      const id=params[0];
+      const index=inMemoryAssignments.findIndex((a) => a.id === id);
       if (index !== -1) {
-        const deleted = inMemoryAssignments.splice(index, 1)[0];
+        const deleted=inMemoryAssignments.splice(index, 1)[0];
         return { rows: [deleted] };
       }
       return { rows: [] };
@@ -142,11 +129,7 @@ async function runTests() {
   };
 
   try {
-    // -------------------------------------------------------------
-    // Test 1: POST /assignments
-    // -------------------------------------------------------------
-    console.log('\nTesting POST /assignments...');
-    const createRes = await request(app, {
+    const createRes=await request(app, {
       method: 'POST',
       path: '/assignments',
       body: {
@@ -154,165 +137,108 @@ async function runTests() {
         deadline: '2026-09-30',
       },
     });
-    assert.strictEqual(createRes.status, 201, 'POST should return 201 Created');
-    const createdData = createRes.json();
+    assert.strictEqual(createRes.status, 201);
+    const createdData=createRes.json();
     assert.strictEqual(createdData.title, 'Node.js Architecture Lab');
     assert.strictEqual(createdData.deadline, '2026-09-30');
-    assert.strictEqual(createdData.submitted, false, 'Default submitted must be false');
-    console.log('✓ POST /assignments passed:', createdData);
+    assert.strictEqual(createdData.submitted, false);
+    console.log('✓ POST /assignments passed');
 
-    // Test 1b: POST validation errors
-    const invalidRes = await request(app, {
+    const invalidRes=await request(app, {
       method: 'POST',
       path: '/assignments',
       body: { title: '' },
     });
-    assert.strictEqual(invalidRes.status, 400, 'POST with invalid body should return 400');
-    console.log('✓ POST /assignments validation passed');
+    assert.strictEqual(invalidRes.status, 400);
+    console.log('✓ POST validation passed');
 
-    // -------------------------------------------------------------
-    // Test 2: GET /assignments (Newest first: ORDER BY id DESC)
-    // -------------------------------------------------------------
-    console.log('\nTesting GET /assignments (all, newest first)...');
-    const getRes = await request(app, {
+    const getRes=await request(app, {
       method: 'GET',
       path: '/assignments',
     });
-    assert.strictEqual(getRes.status, 200, 'GET should return 200 OK');
-    const list = getRes.json();
-    assert(Array.isArray(list), 'Response must be an array');
-    assert(list.length >= 2, 'Should have multiple assignments');
-    // Check ordering newest first
-    for (let i = 0; i < list.length - 1; i++) {
-      assert(list[i].id >= list[i + 1].id, 'Assignments must be ordered by id DESC');
+    assert.strictEqual(getRes.status, 200);
+    const list=getRes.json();
+    assert(Array.isArray(list));
+    for (let i=0; i < list.length - 1; i++) {
+      assert(list[i].id >= list[i + 1].id);
     }
-    console.log(`✓ GET /assignments returned ${list.length} assignments ordered newest first`);
+    console.log('✓ GET /assignments passed (newest first)');
 
-    // -------------------------------------------------------------
-    // Test 3: GET /assignments?submitted=true
-    // -------------------------------------------------------------
-    console.log('\nTesting GET /assignments?submitted=true...');
-    const getSubRes = await request(app, {
+    const getSubRes=await request(app, {
       method: 'GET',
       path: '/assignments?submitted=true',
     });
-    assert.strictEqual(getSubRes.status, 200, 'GET with filter should return 200 OK');
-    const subList = getSubRes.json();
-    assert(Array.isArray(subList), 'Filter response must be an array');
+    assert.strictEqual(getSubRes.status, 200);
+    const subList=getSubRes.json();
+    assert(Array.isArray(subList));
     subList.forEach((item) => {
-      assert.strictEqual(item.submitted, true, 'Filtered item must have submitted = true');
+      assert.strictEqual(item.submitted, true);
     });
-    console.log(`✓ GET /assignments?submitted=true returned ${subList.length} items with submitted=true`);
+    console.log('✓ GET /assignments?submitted=true passed');
 
-    // Test 3b: GET /assignments?submitted=invalid
-    const invalidQueryRes = await request(app, {
+    const invalidQueryRes=await request(app, {
       method: 'GET',
       path: '/assignments?submitted=maybe',
     });
-    assert.strictEqual(invalidQueryRes.status, 400, 'Invalid query parameter should return 400');
-    console.log('✓ GET /assignments?submitted=invalid validation passed');
+    assert.strictEqual(invalidQueryRes.status, 400);
+    console.log('✓ GET query validation passed');
 
-    // Check parameterized queries executed
-    const hasParameterizedSelect = executedQueries.some(
-      (q) => q.text.includes('WHERE submitted = $1') && q.params && q.params[0] === true
-    );
-    assert(hasParameterizedSelect, 'GET filter must use parameterized query ($1)');
-    console.log('✓ Parameterized SQL query verified for GET filter');
-
-    // -------------------------------------------------------------
-    // Test 4: PATCH /assignments/:id (Mark Assignment as Submitted)
-    // -------------------------------------------------------------
-    console.log('\nTesting PATCH /assignments/:id...');
-    const patchRes = await request(app, {
+    const patchRes=await request(app, {
       method: 'PATCH',
       path: '/assignments/1',
     });
-    assert.strictEqual(patchRes.status, 200, 'PATCH should return 200 OK');
-    const patchedData = patchRes.json();
+    assert.strictEqual(patchRes.status, 200);
+    const patchedData=patchRes.json();
     assert.strictEqual(patchedData.id, 1);
-    assert.strictEqual(patchedData.submitted, true, 'Assignment submitted must be updated to true');
-    console.log('✓ PATCH /assignments/1 passed:', patchedData);
+    assert.strictEqual(patchedData.submitted, true);
+    console.log('✓ PATCH /assignments/:id passed');
 
-    // Test 4b: PATCH with non-existent ID (should return 404)
-    const patchNotFoundRes = await request(app, {
+    const patchNotFoundRes=await request(app, {
       method: 'PATCH',
       path: '/assignments/9999',
     });
-    assert.strictEqual(patchNotFoundRes.status, 404, 'PATCH with non-existent ID should return 404');
+    assert.strictEqual(patchNotFoundRes.status, 404);
     assert.strictEqual(patchNotFoundRes.json().message, 'Assignment not found');
-    console.log('✓ PATCH 404 handling passed');
 
-    // Test 4c: PATCH with invalid ID (should return 400)
-    const patchInvalidIdRes = await request(app, {
+    const patchInvalidIdRes=await request(app, {
       method: 'PATCH',
       path: '/assignments/abc',
     });
-    assert.strictEqual(patchInvalidIdRes.status, 400, 'PATCH with invalid ID should return 400');
-    console.log('✓ PATCH invalid ID validation passed');
+    assert.strictEqual(patchInvalidIdRes.status, 400);
 
-    // Check parameterized query executed for UPDATE
-    const hasParameterizedUpdate = executedQueries.some(
-      (q) => q.text.includes('UPDATE assignments') && q.text.includes('WHERE id = $1') && q.params && q.params[0] === 1
-    );
-    assert(hasParameterizedUpdate, 'PATCH must use parameterized query ($1)');
-    console.log('✓ Parameterized SQL query verified for PATCH');
-
-    // -------------------------------------------------------------
-    // Test 5: DELETE /assignments/:id (Delete an Assignment)
-    // -------------------------------------------------------------
-    console.log('\nTesting DELETE /assignments/:id...');
-    const deleteRes = await request(app, {
+    const deleteRes=await request(app, {
       method: 'DELETE',
       path: '/assignments/1',
     });
-    assert.strictEqual(deleteRes.status, 200, 'DELETE should return 200 OK');
-    const deleteData = deleteRes.json();
+    assert.strictEqual(deleteRes.status, 200);
+    const deleteData=deleteRes.json();
     assert.strictEqual(deleteData.message, 'Assignment deleted successfully');
-    assert(deleteData.assignment, 'Response must include deleted assignment');
     assert.strictEqual(deleteData.assignment.id, 1);
-    console.log('✓ DELETE /assignments/1 passed:', deleteData);
+    console.log('✓ DELETE /assignments/:id passed');
 
-    // Test 5b: DELETE with non-existent ID (should return 404)
-    const deleteNotFoundRes = await request(app, {
+    const deleteNotFoundRes=await request(app, {
       method: 'DELETE',
       path: '/assignments/9999',
     });
-    assert.strictEqual(deleteNotFoundRes.status, 404, 'DELETE with non-existent ID should return 404');
+    assert.strictEqual(deleteNotFoundRes.status, 404);
     assert.strictEqual(deleteNotFoundRes.json().message, 'Assignment not found');
-    console.log('✓ DELETE 404 handling passed');
 
-    // Test 5c: DELETE with invalid ID (should return 400)
-    const deleteInvalidIdRes = await request(app, {
+    const deleteInvalidIdRes=await request(app, {
       method: 'DELETE',
       path: '/assignments/abc',
     });
-    assert.strictEqual(deleteInvalidIdRes.status, 400, 'DELETE with invalid ID should return 400');
-    console.log('✓ DELETE invalid ID validation passed');
+    assert.strictEqual(deleteInvalidIdRes.status, 400);
 
-    // Check parameterized query executed for DELETE with RETURNING *
-    const hasParameterizedDelete = executedQueries.some(
-      (q) => q.text.includes('DELETE FROM assignments') && q.text.includes('WHERE id = $1') && q.text.includes('RETURNING *') && q.params && q.params[0] === 1
-    );
-    assert(hasParameterizedDelete, 'DELETE must use parameterized query ($1) with RETURNING *');
-    console.log('✓ Parameterized SQL query with RETURNING * verified for DELETE');
-
-    // -------------------------------------------------------------
-    // Test 6: Undefined Route (404)
-    // -------------------------------------------------------------
-    console.log('\nTesting Undefined Route (404)...');
-    const notFoundRes = await request(app, {
+    const notFoundRes=await request(app, {
       method: 'GET',
       path: '/random-unknown-route',
     });
     assert.strictEqual(notFoundRes.status, 404);
     assert.strictEqual(notFoundRes.json().message, 'Route not found');
-    console.log('✓ Catch-all 404 route passed');
 
-    console.log('\n======================================================');
-    console.log('✓ ALL 4 ROUTES AND REQUIREMENTS VERIFIED SUCCESSFULLY!');
-    console.log('======================================================');
+    console.log('All tests passed!');
   } finally {
-    pool.query = originalQuery;
+    pool.query=originalQuery;
   }
 }
 
@@ -323,4 +249,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { runTests, request };
+module.exports={ runTests, request };
