@@ -15,6 +15,34 @@ const createAssignment = async (title, deadline) => {
   return result.rows[0];
 };
 
+/**
+ * Service to fetch assignments from the database
+ * Supports filtering by submitted status and orders newest first (ORDER BY id DESC)
+ * Uses parameterized SQL query when submitted filter is provided.
+ */
+const getAllAssignments = async (submitted) => {
+  if (submitted !== undefined) {
+    const isSubmitted = submitted === 'true';
+    const query = `
+      SELECT id, title, deadline, submitted
+      FROM assignments
+      WHERE submitted = $1
+      ORDER BY id DESC;
+    `;
+    const result = await pool.query(query, [isSubmitted]);
+    return result.rows;
+  }
+
+  const query = `
+    SELECT id, title, deadline, submitted
+    FROM assignments
+    ORDER BY id DESC;
+  `;
+  const result = await pool.query(query);
+  return result.rows;
+};
+
 module.exports = {
   createAssignment,
+  getAllAssignments,
 };

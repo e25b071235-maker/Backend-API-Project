@@ -1,5 +1,5 @@
 const validateCreateAssignment = (req, res, next) => {
-  const { title, deadline } = req.body;
+  const { title, deadline } = req.body || {};
 
   if (!title || typeof title !== 'string' || title.trim() === '') {
     return res.status(400).json({ message: 'Title is required and must be a non-empty string' });
@@ -23,7 +23,16 @@ const validateIdParam = (req, res, next) => {
   next();
 };
 
+const validateSubmittedQuery = (req, res, next) => {
+  const { submitted } = req.query;
+  if (submitted !== undefined && submitted !== 'true' && submitted !== 'false') {
+    return res.status(400).json({ message: "Query parameter 'submitted' must be 'true' or 'false'" });
+  }
+  next();
+};
+
 module.exports = {
   validateCreateAssignment,
   validateIdParam,
+  validateSubmittedQuery,
 };

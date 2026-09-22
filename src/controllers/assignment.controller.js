@@ -15,6 +15,22 @@ const createAssignment = async (req, res, next) => {
   }
 };
 
+/**
+ * Controller to handle GET /assignments
+ * Supports optional ?submitted=true / ?submitted=false
+ * Returns 200 with list of assignments
+ */
+const getAssignments = async (req, res, next) => {
+  try {
+    const { submitted } = req.query;
+    const assignments = await assignmentService.getAllAssignments(submitted);
+    res.status(200).json(assignments);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createAssignment,
+  getAssignments,
 };
