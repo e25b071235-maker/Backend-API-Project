@@ -257,7 +257,60 @@ async function runTests() {
     assert(hasParameterizedUpdate, 'PATCH must use parameterized query ($1)');
     console.log('✓ Parameterized SQL query verified for PATCH');
 
-    console.log('\n--- Route 1, Route 2, and Route 3 Verified Successfully! ---');
+    // -------------------------------------------------------------
+    // Test 5: DELETE /assignments/:id (Delete an Assignment)
+    // -------------------------------------------------------------
+    console.log('\nTesting DELETE /assignments/:id...');
+    const deleteRes = await request(app, {
+      method: 'DELETE',
+      path: '/assignments/1',
+    });
+    assert.strictEqual(deleteRes.status, 200, 'DELETE should return 200 OK');
+    const deleteData = deleteRes.json();
+    assert.strictEqual(deleteData.message, 'Assignment deleted successfully');
+    assert(deleteData.assignment, 'Response must include deleted assignment');
+    assert.strictEqual(deleteData.assignment.id, 1);
+    console.log('✓ DELETE /assignments/1 passed:', deleteData);
+
+    // Test 5b: DELETE with non-existent ID (should return 404)
+    const deleteNotFoundRes = await request(app, {
+      method: 'DELETE',
+      path: '/assignments/9999',
+    });
+    assert.strictEqual(deleteNotFoundRes.status, 404, 'DELETE with non-existent ID should return 404');
+    assert.strictEqual(deleteNotFoundRes.json().message, 'Assignment not found');
+    console.log('✓ DELETE 404 handling passed');
+
+    // Test 5c: DELETE with invalid ID (should return 400)
+    const deleteInvalidIdRes = await request(app, {
+      method: 'DELETE',
+      path: '/assignments/abc',
+    });
+    assert.strictEqual(deleteInvalidIdRes.status, 400, 'DELETE with invalid ID should return 400');
+    console.log('✓ DELETE invalid ID validation passed');
+
+    // Check parameterized query executed for DELETE with RETURNING *
+    const hasParameterizedDelete = executedQueries.some(
+      (q) => q.text.includes('DELETE FROM assignments') && q.text.includes('WHERE id = $1') && q.text.includes('RETURNING *') && q.params && q.params[0] === 1
+    );
+    assert(hasParameterizedDelete, 'DELETE must use parameterized query ($1) with RETURNING *');
+    console.log('✓ Parameterized SQL query with RETURNING * verified for DELETE');
+
+    // -------------------------------------------------------------
+    // Test 6: Undefined Route (404)
+    // -------------------------------------------------------------
+    console.log('\nTesting Undefined Route (404)...');
+    const notFoundRes = await request(app, {
+      method: 'GET',
+      path: '/random-unknown-route',
+    });
+    assert.strictEqual(notFoundRes.status, 404);
+    assert.strictEqual(notFoundRes.json().message, 'Route not found');
+    console.log('✓ Catch-all 404 route passed');
+
+    console.log('\n======================================================');
+    console.log('✓ ALL 4 ROUTES AND REQUIREMENTS VERIFIED SUCCESSFULLY!');
+    console.log('======================================================');
   } finally {
     pool.query = originalQuery;
   }

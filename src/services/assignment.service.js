@@ -57,8 +57,23 @@ const markAssignmentSubmitted = async (id) => {
   return result.rows[0] || null;
 };
 
+/**
+ * Service to delete an assignment by id
+ * Uses PostgreSQL's RETURNING * and a parameterized SQL query.
+ */
+const deleteAssignment = async (id) => {
+  const query = `
+    DELETE FROM assignments
+    WHERE id = $1
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [id]);
+  return result.rows[0] || null;
+};
+
 module.exports = {
   createAssignment,
   getAllAssignments,
   markAssignmentSubmitted,
+  deleteAssignment,
 };

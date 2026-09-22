@@ -16,4 +16,7 @@ router.get('/', validateSubmittedQuery, assignmentController.getAssignments);
 // PATCH /assignments/:id - Mark Assignment as Submitted
 router.patch('/:id', validateIdParam, assignmentController.markAssignmentAsSubmitted);
 
+// DELETE /assignments/:id - Delete an Assignment
+router.delete('/:id', validateIdParam, assignmentController.deleteAssignment);
+
 module.exports = router;
